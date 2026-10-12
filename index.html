@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Log</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Log">
+<meta name="theme-color" content="#10131a">
+<meta name="color-scheme" content="dark">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #10131a;
+    --surface: #181d27;
+    --surface-2: #202737;
+    --line: #333c4f;
+    --text: #eceff5;
+    --muted: #a3adbf;
+    --accent: #9bbcff;
+    --accent-ink: #0b1220;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+  body {
+    margin: 0 auto;
+    max-width: 390px;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 32px);
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin: 4px 0 14px; }
+
+  .actions { display: flex; gap: 8px; margin-bottom: 8px; }
+  .btn {
+    min-height: 44px; padding: 0 16px; border-radius: var(--radius);
+    border: 1.5px solid var(--line); background: transparent; cursor: pointer;
+    font-weight: 600;
+  }
+  .btn:active { background: var(--surface-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); flex: 1; }
+  .btn.primary:active { filter: brightness(0.9); }
+  .btn.quiet { flex: 1; }
+
+  .datepick { display: none; gap: 8px; margin-bottom: 8px; }
+  .datepick.show { display: flex; }
+  .datepick input {
+    flex: 1; min-height: 44px; padding: 0 12px; border-radius: var(--radius);
+    border: 1.5px solid var(--line); background: var(--surface);
+  }
+
+  /* table */
+  .cols, .head {
+    display: grid; grid-template-columns: 62px 1fr 58px 14px; column-gap: 8px; align-items: center;
+  }
+  .cols { padding: 10px 12px 6px; color: var(--muted); font-size: 13px; }
+  .cols span:nth-child(3) { text-align: right; }
+
+  ul.days { list-style: none; margin: 0; padding: 0; border-top: 1.5px solid var(--line); }
+  .day { border-bottom: 1.5px solid var(--line); }
+  .day.open { background: var(--surface); border-left: 3px solid var(--accent); margin-left: -3px; }
+  .head {
+    width: 100%; padding: 12px; min-height: 56px; text-align: left;
+    background: none; border: 0; cursor: pointer;
+  }
+  .head:active { background: var(--surface-2); }
+  .d1 { font-weight: 700; display: block; }
+  .d2 { font-size: 13px; color: var(--muted); display: block; }
+  .d2.today { color: var(--text); font-weight: 700; }
+  .wk { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wk.empty { color: var(--muted); }
+  .ml { text-align: right; line-height: 1.2; }
+  .ml b { display: block; font-weight: 700; }
+  .ml i { display: block; font-style: normal; font-size: 11px; letter-spacing: 1px; color: var(--accent); }
+  .chev { color: var(--muted); font-size: 13px; }
+
+  .panel { padding: 4px 12px 16px; }
+  .panel label { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
+  .panel textarea {
+    width: 100%; min-height: 44px; padding: 10px 12px; resize: none; overflow: hidden;
+    border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg);
+  }
+  .panel .meals-title { margin: 16px 0 0; font-size: 14px; color: var(--muted); border-top: 1.5px dashed var(--line); padding-top: 12px; }
+  .panel .meals-title + label { margin-top: 8px; }
+  .del { margin-top: 16px; width: 100%; }
+
+  .empty-state { padding: 28px 12px; color: var(--muted); }
+
+  /* backup */
+  details { margin-top: 28px; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  summary { min-height: 44px; padding: 10px 14px; cursor: pointer; font-weight: 600; }
+  .backup-body { padding: 0 14px 14px; }
+  .backup-body p { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+  .backup-body .btn { width: 100%; margin-bottom: 8px; }
+  #restoreBox { display: none; width: 100%; min-height: 110px; padding: 10px 12px; margin-bottom: 8px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); }
+  #restoreBox.show { display: block; }
+  #restoreGo { display: none; }
+  #restoreGo.show { display: block; }
+
+  #status { margin-top: 12px; min-height: 22px; font-size: 14px; color: var(--text); }
+</style>
+</head>
+<body>
+
+<h1>Log</h1>
+
+<div class="actions">
+  <button class="btn primary" id="addToday" type="button">+ Today</button>
+  <button class="btn quiet" id="otherDate" type="button">Other date</button>
+</div>
+<div class="datepick" id="datePick">
+  <input type="date" id="dateInput" aria-label="Date to add">
+  <button class="btn" id="dateAdd" type="button">Add day</button>
+</div>
+
+<div class="cols" aria-hidden="true"><span>Date</span><span>Workout</span><span>Meals</span><span></span></div>
+<ul class="days" id="days"></ul>
+
+<details id="backup">
+  <summary>Backup and restore</summary>
+  <div class="backup-body">
+    <p>Your log lives only on this phone. Copy a backup now and then, and paste it into Notes.</p>
+    <button class="btn" id="copyBackup" type="button">Copy backup</button>
+    <button class="btn" id="showRestore" type="button">Restore from pasted backup</button>
+    <textarea id="restoreBox" aria-label="Paste backup here" placeholder="Paste backup text here"></textarea>
+    <button class="btn primary" id="restoreGo" type="button">Restore days</button>
+  </div>
+</details>
+<div id="status" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  var KEY = 'wm-log-v1';
+  var FIELDS = [['workout', 'Workout'], ['breakfast', 'Breakfast'], ['lunch', 'Lunch'], ['dinner', 'Dinner'], ['snacks', 'Snacks']];
+  var MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'];
+  var data = {};
+  var openDate = null;
+  var statusTimer = null;
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      var parsed = raw ? JSON.parse(raw) : {};
+      data = (parsed && typeof parsed === 'object') ? parsed : {};
+    } catch (e) { data = {}; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(data)); }
+    catch (e) { say('Could not save on this device. Copy a backup now.'); }
+  }
+  function say(msg) {
+    var s = document.getElementById('status');
+    s.textContent = msg;
+    clearTimeout(statusTimer);
+    statusTimer = setTimeout(function () { s.textContent = ''; }, 5000);
+  }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function todayStr() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parts(str) { var p = str.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function line1(str) {
+    var d = parts(str);
+    var t = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    if (d.getFullYear() !== new Date().getFullYear()) t += ' \u2019' + String(d.getFullYear()).slice(2);
+    return t;
+  }
+  function line2(str) {
+    return str === todayStr() ? 'Today' : parts(str).toLocaleDateString('en-US', { weekday: 'short' });
+  }
+  function mealCount(e) {
+    var n = 0;
+    MEALS.forEach(function (m) { if ((e[m] || '').trim()) n++; });
+    return n;
+  }
+  function firstLine(s) { return (s || '').trim().split('\n')[0]; }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function grow(t) { t.style.height = 'auto'; t.style.height = Math.max(44, t.scrollHeight + 2) + 'px'; }
+
+  function fillSummary(head, date) {
+    var e = data[date];
+    var wk = head.querySelector('.wk');
+    var w = firstLine(e.workout);
+    wk.textContent = w || 'No workout';
+    wk.className = 'wk' + (w ? '' : ' empty');
+    var n = mealCount(e);
+    head.querySelector('.ml b').textContent = n + '/4';
+    head.querySelector('.ml i').textContent = '\u25A0'.repeat(n) + '\u25A1'.repeat(4 - n);
+    head.setAttribute('aria-label', line1(date) + ', ' + line2(date) + '. ' + (w || 'No workout') + '. ' + n + ' of 4 meals logged.');
+  }
+
+  function buildDay(date) {
+    var e = data[date];
+    var isOpen = openDate === date;
+    var li = el('li', 'day' + (isOpen ? ' open' : ''));
+    li.setAttribute('data-date', date);
+
+    var head = el('button', 'head');
+    head.type = 'button';
+    head.setAttribute('aria-expanded', String(isOpen));
+
+    var c1 = el('span');
+    c1.appendChild(el('span', 'd1', line1(date)));
+    c1.appendChild(el('span', 'd2' + (date === todayStr() ? ' today' : ''), line2(date)));
+    var c2 = el('span', 'wk');
+    var c3 = el('span', 'ml');
+    c3.appendChild(el('b'));
+    c3.appendChild(el('i'));
+    c3.lastChild.setAttribute('aria-hidden', 'true');
+    var c4 = el('span', 'chev', isOpen ? '\u25BE' : '\u25B8');
+    c4.setAttribute('aria-hidden', 'true');
+    head.appendChild(c1); head.appendChild(c2); head.appendChild(c3); head.appendChild(c4);
+    fillSummary(head, date);
+
+    head.addEventListener('click', function () {
+      openDate = (openDate === date) ? null : date;
+      render();
+      if (openDate === date) {
+        var node = document.querySelector('[data-date="' + date + '"]');
+        if (node) node.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      }
+    });
+    li.appendChild(head);
+
+    if (isOpen) {
+      var panel = el('div', 'panel');
+      FIELDS.forEach(function (f, i) {
+        if (i === 1) panel.appendChild(el('p', 'meals-title', 'Meals'));
+        var id = 'f-' + f[0];
+        var lab = el('label', null, f[1]);
+        lab.setAttribute('for', id);
+        var ta = el('textarea');
+        ta.id = id;
+        ta.rows = 1;
+        ta.value = e[f[0]] || '';
+        ta.addEventListener('input', function () {
+          e[f[0]] = ta.value;
+          save();
+          grow(ta);
+          fillSummary(head, date);
+        });
+        panel.appendChild(lab);
+        panel.appendChild(ta);
+      });
+      var del = el('button', 'btn del', 'Delete this day');
+      del.type = 'button';
+      del.addEventListener('click', function () {
+        if (confirm('Delete ' + line1(date) + ' and everything logged for it?')) {
+          delete data[date];
+          openDate = null;
+          save();
+          render();
+          say('Deleted ' + line1(date) + '.');
+        }
+      });
+      panel.appendChild(del);
+      li.appendChild(panel);
+    }
+    return li;
+  }
+
+  function render() {
+    var ul = document.getElementById('days');
+    ul.textContent = '';
+    var dates = Object.keys(data).sort().reverse();
+    if (!dates.length) {
+      var li = el('li', 'empty-state', 'No days yet. Tap + Today to log your first one.');
+      ul.appendChild(li);
+      return;
+    }
+    dates.forEach(function (d) { ul.appendChild(buildDay(d)); });
+    ul.querySelectorAll('textarea').forEach(grow);
+  }
+
+  function addDate(d) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { say('Pick a date first.'); return; }
+    if (!data[d]) {
+      data[d] = { workout: '', breakfast: '', lunch: '', dinner: '', snacks: '' };
+      save();
+    }
+    openDate = d;
+    render();
+    var node = document.querySelector('[data-date="' + d + '"]');
+    if (node) node.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+
+  document.getElementById('addToday').addEventListener('click', function () { addDate(todayStr()); });
+  document.getElementById('otherDate').addEventListener('click', function () {
+    var p = document.getElementById('datePick');
+    p.classList.toggle('show');
+    var inp = document.getElementById('dateInput');
+    if (!inp.value) inp.value = todayStr();
+  });
+  document.getElementById('dateAdd').addEventListener('click', function () {
+    addDate(document.getElementById('dateInput').value);
+    document.getElementById('datePick').classList.remove('show');
+  });
+
+  // backup
+  document.getElementById('copyBackup').addEventListener('click', function () {
+    var txt = JSON.stringify(data);
+    function fallback() {
+      var box = document.getElementById('restoreBox');
+      box.classList.add('show');
+      box.value = txt;
+      box.focus(); box.select();
+      try { document.execCommand('copy'); say('Backup copied.'); }
+      catch (e) { say('Select the text in the box and copy it.'); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () { say('Backup copied. Paste it into Notes.'); }, fallback);
+    } else { fallback(); }
+  });
+  document.getElementById('showRestore').addEventListener('click', function () {
+    document.getElementById('restoreBox').classList.add('show');
+    document.getElementById('restoreBox').value = '';
+    document.getElementById('restoreGo').classList.add('show');
+    document.getElementById('restoreBox').focus();
+  });
+  document.getElementById('restoreGo').addEventListener('click', function () {
+    var txt = document.getElementById('restoreBox').value.trim();
+    try {
+      var parsed = JSON.parse(txt);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('bad');
+      var n = 0;
+      Object.keys(parsed).forEach(function (k) {
+        var v = parsed[k];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(k) && v && typeof v === 'object') {
+          var clean = {};
+          FIELDS.forEach(function (f) { clean[f[0]] = typeof v[f[0]] === 'string' ? v[f[0]] : ''; });
+          data[k] = clean; n++;
+        }
+      });
+      save(); render();
+      document.getElementById('restoreBox').classList.remove('show');
+      document.getElementById('restoreGo').classList.remove('show');
+      say('Restored ' + n + ' day' + (n === 1 ? '' : 's') + '. Matching dates were replaced by the backup.');
+    } catch (e) {
+      say('That text is not a valid backup. Nothing was changed.');
+    }
+  });
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
